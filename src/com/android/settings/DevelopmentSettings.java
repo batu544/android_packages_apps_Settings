@@ -433,6 +433,7 @@ public class DevelopmentSettings extends SettingsPreferenceFragment
 
         mProcessStats = (PreferenceScreen) findPreference(PROCESS_STATS);
         mAllPrefs.add(mProcessStats);
+
         mRootAccess = (ListPreference) findPreference(ROOT_ACCESS_KEY);
         mRootAccess.setOnPreferenceChangeListener(this);
         if (!removeRootOptionsIfRequired()) {
@@ -472,9 +473,19 @@ public class DevelopmentSettings extends SettingsPreferenceFragment
         return pref;
     }
 
+    // Check for SuperSU app installed
+    private boolean checkSuperSu() {
+        boolean superSu = false;
+        try {
+            superSu = (getPackageManager().getPackageInfo("eu.chainfire.supersu", 0).versionCode >= 185);
+        } catch (PackageManager.NameNotFoundException e) {
+        }
+        return superSu;
+    }
+
     private boolean removeRootOptionsIfRequired() {
         // user builds don't get root, and eng always gets root
-        if (!(Build.IS_DEBUGGABLE || "eng".equals(Build.TYPE))) {
+        if (!(Build.IS_DEBUGGABLE || "eng".equals(Build.TYPE)) || checkSuperSu()) {
             if (mRootAccess != null) {
                 getPreferenceScreen().removePreference(mRootAccess);
                 return true;
