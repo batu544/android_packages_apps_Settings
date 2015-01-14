@@ -27,6 +27,7 @@ import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Bundle;
 import android.os.UserHandle;
 import android.preference.Preference;
+import android.preference.Preference.OnPreferenceChangeListener;
 import android.preference.PreferenceScreen;
 import android.preference.ListPreference;
 import android.preference.Preference.OnPreferenceChangeListener;
@@ -39,7 +40,8 @@ import com.android.settings.util.Helpers;
 import com.android.settings.Utils;
 
 public class LockcrDroid extends SettingsPreferenceFragment
-        implements OnSharedPreferenceChangeListener {
+        implements OnSharedPreferenceChangeListener,
+        Preference.OnPreferenceChangeListener {
 
     private static final String TAG = "LockcrDroid";
 
@@ -47,9 +49,13 @@ public class LockcrDroid extends SettingsPreferenceFragment
     public static final String LOCKCLOCK_PACKAGE_NAME = "com.cyanogenmod.lockclock";
 
     private static final String KEY_LOCKSCREEN_CAMERA_WIDGET_HIDE = "camera_widget_hide";
+    private static final String KEY_LOCKSCREEN_DIALER_WIDGET_HIDE = "dialer_widget_hide";
 
     private PreferenceScreen mLockScreen;
     private SwitchPreference mCameraWidgetHide;
+    private SwitchPreference mDialerWidgetHide;
+
+    private Context mContext;
 
     private Preference mLockClock;
 
@@ -63,6 +69,7 @@ public class LockcrDroid extends SettingsPreferenceFragment
         PreferenceScreen prefSet = getPreferenceScreen();
         PackageManager pm = getPackageManager();
         Resources res = getResources();
+        mContext = getActivity();
 
         mLockScreen = (PreferenceScreen) findPreference("lock_screen");
 
@@ -76,6 +83,17 @@ public class LockcrDroid extends SettingsPreferenceFragment
         }
         if (mCameraDisabled){
             mLockScreen.removePreference(mCameraWidgetHide);
+        }
+
+        // Dialer widget hide
+        mDialerWidgetHide = (SwitchPreference) prefSet.findPreference(KEY_LOCKSCREEN_DIALER_WIDGET_HIDE);
+        mDialerWidgetHide.setChecked(Settings.System.getIntForUser(resolver,
+            Settings.System.DIALER_WIDGET_HIDE, 0, UserHandle.USER_CURRENT) == 1);
+        mDialerWidgetHide.setOnPreferenceChangeListener(this);
+
+        mDialerWidgetHide = (SwitchPreference) findPreference("dialer_widget_hide");
+        if ((!Utils.isVoiceCapable(mContext) || Utils.isWifiOnly(mContext))) {
+            mLockScreen.removePreference(mDialerWidgetHide);
         }
 
         // cLock app check
@@ -102,5 +120,16 @@ public class LockcrDroid extends SettingsPreferenceFragment
     @Override
     public boolean onPreferenceTreeClick(PreferenceScreen preferenceScreen, Preference preference) {
         return super.onPreferenceTreeClick(preferenceScreen, preference);
+    }
+
+    @Override
+    public boolean onPreferenceChange(Preference preference, Object objValue) {
+        if (preference == mDialerWidgetHide) {
+            boolean value = (Boolean) objValue;
+            Settings.System.putIntForUser(getActivity().getContentResolver(),
+                    Settings.System.DIALER_WIDGET_HIDE, value ? 1 : 0, UserHandle.USER_CURRENT);
+            Helpers.restartSystemUI();
+        }
+        return false;
     }
 }
